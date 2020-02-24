@@ -1,4 +1,4 @@
-module github.com/ugis70194/go_web
+module github.com/ugis70194/go_web/backend
 
 go 1.13
 
