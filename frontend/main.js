@@ -27,14 +27,11 @@ var vm = new Vue({
         }
     },
     methods: {
-        setInfo() {
-            this.rating1 = 1333
-            this.rating2 = 1222
-            console.log(event.target.tagName)
-        },
-        getRating() {
+        janken() {
             axios.get('http://localhost:8000/user_rating?username=' + this.user1 + '&username=' + this.user2)
-            .then( res => ( this.rating1 = res['data']['rating1'],this.rating2 = res['data']['rating2']));
+            .then( res => ( this.rating1 = res['data']['rating1'],this.rating2 = res['data']['rating2']))
+            axios.post('http://localhost:8000/janken', { "hand": 1})
+            .then(res => (this.jankenRes = res['data']['result']))
         }
     }
 })
