@@ -39,10 +39,6 @@ func xorShift() int {
 
 func userRating(ctx *gin.Context){
 	ctx.Header("Access-Control-Allow-Origin", "*")
-	ctx.Header("Access-Control-Allow-Headers", "Content-Type, Accept, X-CSRFToken")
-	ctx.Header("Access-Control-Allow-Methods", "POST, GET")
-	
-
 	var ratings [2]uint = [2]uint{0, 0}
 	var usernames []string = ctx.QueryArray("username")
 
@@ -79,10 +75,11 @@ func userRating(ctx *gin.Context){
 }
 
 type hand struct {
-	Kind int `josn:"kind"`
+	Kind int `josn:"hand"`
 }
 
 func janken(ctx *gin.Context) {
+	ctx.Header("Access-Control-Allow-Origin", "*")
 	var myhand hand 
 	ctx.BindJSON(&myhand)
 	hand1 := myhand.Kind 
@@ -92,8 +89,24 @@ func janken(ctx *gin.Context) {
 	ctx.JSON(200, gin.H{ "result" : result })
 }
 
+func copyCORSMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+        c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+        c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding,Access-Control-Allow-Origin, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
+        c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(204)
+            return
+        }
+        c.Next()
+    }
+}
+
 func main() {
-    router := gin.Default()
+	router := gin.Default()
+
+	router.Use( copyCORSMiddleware())
 
 	router.POST("/janken", janken)
 	router.GET("/user_rating", userRating)
