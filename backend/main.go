@@ -28,8 +28,8 @@ type userInfo struct {
 	Data userData  `json:"data"` 
 }
 
-var x uint32 = 1
-func xorShift() uint32 {
+var x int = 1
+func xorShift() int {
 	if x == 0 { x = 1 } 
 	x ^= (x << 13)
 	x ^= (x >> 17)
@@ -38,39 +38,65 @@ func xorShift() uint32 {
 }
 
 func userRating(ctx *gin.Context){
-	var userinfo userInfo
-	var username string = ctx.Query("username")
-	if username == "" { username = "tourist" }
+	ctx.Header("Access-Control-Allow-Origin", "*")
+	ctx.Header("Access-Control-Allow-Headers", "Content-Type, Accept, X-CSRFToken")
+	ctx.Header("Access-Control-Allow-Methods", "POST, GET")
+	
 
-	var url string = "https://us-central1-atcoderusersapi.cloudfunctions.net/api/info/username/" + username
+	var ratings [2]uint = [2]uint{0, 0}
+	var usernames []string = ctx.QueryArray("username")
 
-	timeout := time.Duration(5 * time.Second)
-	client := &http.Client{
-		Timeout: timeout, 
+	for i, username := range(usernames) {
+		var userinfo userInfo
+		var url string = "https://us-central1-atcoderusersapi.cloudfunctions.net/api/info/username/" + username
+
+		timeout := time.Duration(5 * time.Second)
+		client := &http.Client{
+			Timeout: timeout, 
+		}
+
+		req, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			ctx.JSON(200, gin.H{"rating1" : ratings[0], "rating2" : ratings[1]}) 
+			log.Print(err) 
+		}
+
+		res, err := client.Do(req)
+		if err != nil {
+			ctx.JSON(200, gin.H{"rating1" : ratings[0], "rating2" : ratings[1]}) 
+			log.Print(err) 
+		}
+
+		defer res.Body.Close()	
+		body, err := ioutil.ReadAll(res.Body)
+		if err := json.Unmarshal(body, &userinfo); err != nil { 
+			ctx.JSON(200, gin.H{"rating1" : ratings[0], "rating2" : ratings[1]})
+			log.Print(err) 
+		}
+		ratings[i] = userinfo.Data.Rating
 	}
+	ctx.JSON(200, gin.H{"rating1" : ratings[0], "rating2" : ratings[1]})
+}
 
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil { log.Fatal(err) }
-	
-	res, err := client.Do(req)
-	if err != nil { log.Fatal(err) }
-
-	defer res.Body.Close()	
-	body, err := ioutil.ReadAll(res.Body)
-	if err := json.Unmarshal(body, &userinfo); err != nil { log.Fatal(err) }
-	
-	ctx.JSON(200, gin.H{"rating" : userinfo.Data.Rating})
+type hand struct {
+	Kind int `josn:"kind"`
 }
 
 func janken(ctx *gin.Context) {
-	ctx.JSON(200, gin.H{ "num" : xorShift() % 3 })
+	var myhand hand 
+	ctx.BindJSON(&myhand)
+	hand1 := myhand.Kind 
+	hand2 := xorShift() % 3
+	result := (hand1-hand2+3) % 3
+
+	ctx.JSON(200, gin.H{ "result" : result })
 }
 
 func main() {
     router := gin.Default()
 
-	router.GET("/janken", janken)
+	router.POST("/janken", janken)
 	router.GET("/user_rating", userRating)
 	
-    router.Run()
+    router.Run(":8000")
 }
